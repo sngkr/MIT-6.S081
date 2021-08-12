@@ -6,9 +6,9 @@
  * @Description: In User Settings Edit
  * @FilePath: /xv6-labs-2020/user/sleep.c
  */
-#include "kernel/types.h"
-#include "kernel/stat.h"
-#include "user/user.h"
+#include "../kernel/types.h"
+#include "../kernel/stat.h"
+#include "../user/user.h"
 
 int main(int argn, char *argv[])
 {
