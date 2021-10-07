@@ -15,7 +15,7 @@ fmtname(char *path)
   p++;
 
   // Return blank-padded name.
-  if(strlen(p) >= DIRSIZ)
+  if(strlen(p) >= DIRSIZ)/* 为了输出时统一好看即：filename     *** *** */
     return p;
   memmove(buf, p, strlen(p));
   memset(buf+strlen(p), ' ', DIRSIZ-strlen(p));
@@ -43,7 +43,7 @@ ls(char *path)
 
   switch(st.type){
   case T_FILE:
-    printf("%s %d %d %l\n", fmtname(path), st.type, st.ino, st.size);
+    printf("%s %d %d %d\n", fmtname(path), st.type, st.ino, st.size);
     break;
 
   case T_DIR:
@@ -54,10 +54,11 @@ ls(char *path)
     strcpy(buf, path);
     p = buf+strlen(buf);
     *p++ = '/';
-    while(read(fd, &de, sizeof(de)) == sizeof(de)){
-      if(de.inum == 0)
+    while(read(fd, &de, sizeof(de)) == sizeof(de)){/* “对于内核而言，所有打开的文件都通过文件描述符引用” */
+      if(de.inum == 0)//inum==0表明这是一个无效的entry
         continue;
       memmove(p, de.name, DIRSIZ);
+      /* 将p后的第DIRSIZ元素设为0 */
       p[DIRSIZ] = 0;
       if(stat(buf, &st) < 0){//stat()函数成功返回0失败返回-1，fstat()一样
         printf("ls: cannot stat %s\n", buf);
