@@ -101,6 +101,7 @@ uint64
 sys_trace(void)
 {
   int n;
+  /* 函数 argint、 argaddr 和 argfd 从 trapframe 中以整数、指针、文件描述符的形式检索第 n 个系统调用参数 */
   if (argint(0, &n) < 0)
     return -1;
   myproc()->mask = n;

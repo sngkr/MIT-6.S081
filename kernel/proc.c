@@ -292,6 +292,7 @@ fork(void)
 
   safestrcpy(np->name, p->name, sizeof(p->name));
 
+  /*  copy the trace mask from the parent to the child process. */
   //mask
   np->mask = p->mask;
 
