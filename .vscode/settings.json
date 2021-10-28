@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "*.json": "jsonc",
-        "fs.h": "c"
+        "fs.h": "c",
+        "memlayout.h": "c"
     }
 }

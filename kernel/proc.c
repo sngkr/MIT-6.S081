@@ -149,7 +149,7 @@ freeproc(struct proc *p)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
   if(p->kpagetable)
-    proc_freekpagetable(p->kpagetable, p->kstack);
+    proc_freekpagetable(p->kpagetable, p->kstack, p->sz);
   p->kpagetable = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
@@ -208,7 +208,7 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
 }
 
 void            
-proc_freekpagetable(pagetable_t pagetable, uint64 kstack)
+proc_freekpagetable(pagetable_t pagetable, uint64 kstack, uint64 sz)
 {
   //vmprint(pagetable);
   uvmunmap(pagetable, UART0, 1, 0); 
@@ -219,9 +219,9 @@ proc_freekpagetable(pagetable_t pagetable, uint64 kstack)
   uvmunmap(pagetable, (uint64)etext, (PHYSTOP-(uint64)etext)/PGSIZE, 0 );
   uvmunmap(pagetable, TRAMPOLINE, 1, 0);
   
-///  uvmunmap(pagetable,0,PGROUNDUP(sz)/PGSIZE, 0);
-  //uvmunmap(pagetable, kstack,1,1);
-  uvmfree2(pagetable, kstack ,1);
+  uvmunmap(pagetable,0,PGROUNDUP(sz)/PGSIZE, 0);
+  uvmunmap(pagetable, kstack,1,1);
+  //uvmfree2(pagetable, kstack ,1);
   //  for(int i = 0; i < 512; i++){
   //       pte_t pte = pagetable[i];
   //       if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
@@ -250,7 +250,6 @@ void
 userinit(void)
 {
   struct proc *p;
-
   p = allocproc();
   initproc = p;
   
@@ -258,7 +257,13 @@ userinit(void)
   // and data into it.
   uvminit(p->pagetable, initcode, sizeof(initcode));
   p->sz = PGSIZE;
-
+  user_uvmcopy(p->pagetable, p->kpagetable, 0 , p->sz);
+// //这里的p->sz 只有一页大小，所以不用循环调用
+//   userpte = (pte_t*)walk(p->pagetable,0,0);
+//   kernelpte = (pte_t*)walk(p->kpagetable, 0, 1);
+//   if(!userpte || !kernelpte)
+//   panic("userinit-pte_t") ;
+//   *kernelpte = (*userpte) & (~PTE_U);
   // prepare for the very first "return" from kernel to user.
   p->trapframe->epc = 0;      // user program counter
   p->trapframe->sp = PGSIZE;  // user stack pointer
@@ -281,9 +286,13 @@ growproc(int n)
 
   sz = p->sz;
   if(n > 0){
+    //***
+    if(PGROUNDUP(sz + n) >= PLIC)
+      return -1;
     if((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0) {
       return -1;
     }
+    user_uvmcopy(p->pagetable, p->kpagetable, sz - n, sz);
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
@@ -299,7 +308,6 @@ fork(void)
   int i, pid;
   struct proc *np;
   struct proc *p = myproc();
-
   // Allocate process.
   if((np = allocproc()) == 0){
     return -1;
@@ -311,6 +319,14 @@ fork(void)
     release(&np->lock);
     return -1;
   }
+  // //子进程要复制父进程以前所有的环境，p->sz 不止一页
+  // for(int j=0; j<p->sz; j+=PGSIZE){
+  // userpte = (pte_t*)walk(p->pagetable,j ,0);
+  // kernelpte =(pte_t*) walk(p->kpagetable, j, 1);  
+  //   if(!userpte || !kernelpte)
+  //   panic("fork-pte_t") ;
+  // *kernelpte = (*userpte) & (~PTE_U);
+  // }
   np->sz = p->sz;
 
   np->parent = p;
@@ -327,6 +343,7 @@ fork(void)
       np->ofile[i] = filedup(p->ofile[i]);
   np->cwd = idup(p->cwd);
 
+  user_uvmcopy(np->pagetable, np->kpagetable, 0 , np->sz);
   safestrcpy(np->name, p->name, sizeof(p->name));
 
   pid = np->pid;

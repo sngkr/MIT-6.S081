@@ -43,12 +43,29 @@ sys_sbrk(void)
 {
   int addr;
   int n;
-
+  // pte_t *userpte, *kernelpte;
+  //struct proc *p = myproc();
   if(argint(0, &n) < 0)
     return -1;
   addr = myproc()->sz;
   if(growproc(n) < 0)
     return -1;
+
+//   if(n>0){
+//      user_uvmcopy(p->pagetable, p->kpagetable, addr ,n);
+//   // for( j=0; j<p->sz; j+=PGSIZE){
+//   //   userpte = (pte_t*)walk(p->pagetable,j,0);
+//   //   kernelpte = (pte_t*)walk(p->kpagetable, j, 1); 
+//   //   if(!userpte || !kernelpte)
+//   //     panic("sys_sbrk-pte_t") ;
+//   //   *kernelpte = (*userpte) & (~PTE_U);
+//  //   }
+//   }
+//   else{
+//     for(j=addr - PGSIZE; j>=addr+n; j-=PGSIZE){
+//       uvmunmap(p->kpagetable, j, 1, 0);
+//     }
+ // }
   return addr;
 }
 
