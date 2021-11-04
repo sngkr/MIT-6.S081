@@ -132,3 +132,15 @@ printfinit(void)
   initlock(&pr.lock, "pr");
   pr.locking = 1;
 }
+
+void backtrace(void){
+  printf("backtrace:\n");
+  uint64 fp = r_fp();
+//XV6在内核中以页面对齐的地址为每个栈分配一个页面。
+//使用PGROUNDUP(fp) - PGROUNDDOWN(fp) == PGSIZE判断当前的fp是否被分配了一个页面来终止循环。
+  while(PGROUNDUP(fp) - PGROUNDDOWN(fp) == PGSIZE){
+    uint64 ret_add = *(uint64*)(fp-8);
+    printf("%p\n", ret_add);
+    fp = *(uint64*)(fp-16);
+  }
+}
