@@ -49,7 +49,7 @@ usertrap(void)
   
   // save user program counter.
   p->trapframe->epc = r_sepc();
-  
+  // uint64 rscause = r_scause();
   if(r_scause() == 8){
     // system call
 
@@ -67,7 +67,29 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
-  } else {
+  } else if(r_scause() == 15  || r_scause() == 13){
+      uint64 va = r_stval();
+      // printf("page fault %p\n", va);
+      uint64 ka = (uint64)kalloc();
+      //如果没有物理页面 \\ 发生错误的位置不在 p->sz  和 p->trapframe 之间  ！！！说明就要杀死进程
+      // sp 指向用户栈顶端
+      if(ka == 0 || va > p->sz || p->trapframe->sp > va){
+        p->killed = 1;
+      }else{
+        //如果有页面，那么清零然后映射
+        // if(PGROUNDUP(p->trapframe->sp) - 1 < va)
+        //   printf("*******************\n");
+        memset((void*)ka, 0 , PGSIZE);
+        //取四舍五入到底部，前面测试得到的stval（错误地址）为4008（第五个页偏移8），那么从4000开始增加页
+        va = PGROUNDDOWN(va);
+        if(mappages(p->pagetable, va , PGSIZE, ka, PTE_W|PTE_U|PTE_R|PTE_X ) !=0){
+          kfree((void*)ka);
+          p->killed = 1;
+        }
+    }
+    // printf("r_scaue()==15  page fault end\n");
+    // vmprint(p->pagetable);
+  }else{
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;

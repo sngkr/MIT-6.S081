@@ -47,6 +47,7 @@ sys_sbrk(void)
   if(argint(0, &n) < 0)
     return -1;
   addr = myproc()->sz;
+  // printf("sz: %d\nsp: %d\n",myproc()->sz, myproc()->trapframe->sp - PGSIZE);
   if(growproc(n) < 0)
     return -1;
   return addr;
