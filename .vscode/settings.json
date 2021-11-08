@@ -1,0 +1,14 @@
+{
+    "files.associations": {
+        "*.json": "jsonc",
+        "riscv.h": "c",
+        "defs.h": "c",
+        "memlayout.h": "c",
+        "types.h": "c",
+        "param.h": "c",
+        "spinlock.h": "c",
+        "proc.h": "c",
+        "syscall.h": "c",
+        "cstdlib": "c"
+    }
+}

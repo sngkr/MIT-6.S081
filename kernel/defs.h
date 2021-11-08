@@ -8,7 +8,7 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
-
+struct REF;
 // bio.c
 void            binit(void);
 struct buf*     bread(uint, uint);
@@ -63,7 +63,10 @@ void            ramdiskrw(struct buf*);
 void*           kalloc(void);
 void            kfree(void *);
 void            kinit(void);
-
+int             cowpage(uint64);
+void*           cowalloc(uint64);
+int             krefcnt(void*);
+int             kaddrefcnt(void*);
 // log.c
 void            initlog(int, struct superblock*);
 void            log_write(struct buf*);
@@ -156,6 +159,7 @@ int             uartgetc(void);
 // vm.c
 void            kvminit(void);
 void            kvminithart(void);
+pte_t *         walk(pagetable_t, uint64, int);
 uint64          kvmpa(uint64);
 void            kvmmap(uint64, uint64, uint64, int);
 int             mappages(pagetable_t, uint64, uint64, uint64, int);
