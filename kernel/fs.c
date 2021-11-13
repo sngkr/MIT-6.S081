@@ -401,6 +401,40 @@ bmap(struct inode *ip, uint bn)
     return addr;
   }
 
+  bn -= NINDIRECT;
+  if(bn < NINDIRECT * NINDIRECT){
+    /* 算出 */
+    uint indx_level1 = bn / NINDIRECT; 
+    uint indx_level2 = bn % NINDIRECT;
+
+    // Load indirect block, allocating if necessary.
+    if((addr = ip->addrs[NDIRECT+1]) == 0)
+      ip->addrs[NDIRECT+1] = addr = balloc(ip->dev);
+    /* 将内容读入 */
+    bp = bread(ip->dev, addr);
+    /* 为再次查询做准备 ，以上最多可以获得NINDIRECT + 11个inode，
+    后面继续查询可以获得NINDIRECT*NINDIRECT个
+     */
+    a = (uint*)bp->data;
+    
+    if((addr = a[indx_level1]) == 0){
+      a[indx_level1] = addr = balloc(ip->dev);
+      log_write(bp);
+    }
+    brelse(bp);
+      
+    bp = bread(ip->dev, addr);
+    a = (uint*)bp->data;
+
+    if((addr = a[indx_level2]) == 0){
+      a[indx_level2] = addr = balloc(ip->dev);
+      log_write(bp);
+    }
+    brelse(bp);
+
+    return addr;
+  }
+
   panic("bmap: out of range");
 }
 
@@ -429,6 +463,26 @@ itrunc(struct inode *ip)
     }
     brelse(bp);
     bfree(ip->dev, ip->addrs[NDIRECT]);
+    ip->addrs[NDIRECT] = 0;
+  }
+
+  if(ip->addrs[NDIRECT+1]){
+    bp = bread(ip->dev, ip->addrs[NDIRECT+1]);
+    a = (uint*)bp->data;
+    for(j = 0; j < NINDIRECT; j++){
+      if(a[j]){
+        struct buf * temp_bp = bread(ip->dev, a[j]);
+        uint* temp_a = (uint*)temp_bp->data;
+        for(int k=0; k<NINDIRECT; k++){
+          if(temp_a[k])
+            bfree(ip->dev,temp_a[k]);
+        }
+        brelse(temp_bp);
+        bfree(ip->dev, a[j]);
+      }
+    }
+    brelse(bp);
+    bfree(ip->dev, ip->addrs[NDIRECT+1]);
     ip->addrs[NDIRECT] = 0;
   }
 
